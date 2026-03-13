@@ -19,7 +19,7 @@ cargo build --release --features "embed_static"
 
 ```
 
-如果使用`embed_static`特征，无需额外static资源目录，程序会将`../static/index.min.html`嵌入到可执行文件中，但部分css/js资源仍需要从网络引入。反正，则需`./static`目录存放`index.html`来加载资源给前端。
+如果使用`embed_static`特征，无需额外static资源目录，程序会将`../static/index.min.html`嵌入到可执行文件中，但部分css/js资源仍需要从网络引入。反之，则需`./static`目录存放`index.html`来加载资源给前端。
 
 启动参数如下:
 
