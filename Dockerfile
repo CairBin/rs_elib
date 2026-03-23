@@ -7,11 +7,7 @@ WORKDIR /app
 # 复制Cargo.toml和Cargo.lock
 COPY Cargo.toml Cargo.lock ./
 
-# 创建一个空的main.rs文件来构建依赖
-RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
-
-# 构建依赖
-RUN cargo build --release
+RUN cargo fetch
 
 # 复制源代码
 COPY src ./src
