@@ -8,6 +8,9 @@ export default defineConfig({
     vue(),
     tailwindcss()
   ],
+  build: {
+    outDir: '../static'
+  },
   server: {
     proxy: {
       '/api': {

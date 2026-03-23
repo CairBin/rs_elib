@@ -121,14 +121,365 @@ const loadChapter = async (index: number) => {
     const response = await apiRequest(`/books/${bookId.value}/chapters/${index + 1}`);
     if (response.ok) {
       const resJson = await response.json();
-      // console.log('Chapter content:', resJson);
-      readerContent.value = resJson.content || '';
+      let content = resJson.content || '';
+      
+      // console.log('原始内容:', content);
+      
+      // 在渲染前修改内容中的图片，把 src 换成 data-src，避免浏览器直接加载
+      content = prepareImagesForLoading(content);
+      
+      // console.log('处理后内容:', content);
+      
+      readerContent.value = content;
+      // 处理章节内容中的图片，添加认证头
+      setTimeout(() => {
+        loadAllImages();
+      }, 100);
       // 加载当前章节的评论
       loadComments();
     }
   } catch (error) {
     console.error('Failed to load chapter content:', error);
     showToast('加载章节内容失败', 'error');
+  }
+};
+
+// 准备图片和资源，在渲染前处理各种资源引用
+const prepareImagesForLoading = (content: string) => {
+  let result = content;
+  
+  // 处理 CSS link 标签 - 双引号
+  result = result.replace(/<link([^>]+)href="([^"]+\.css)"([^>]*)>/gi, (_match, before, href, after) => {
+    // console.log('找到 CSS (双引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<link${before}href="" data-css="${fullHref}"${after}>`;
+  });
+  
+  // 处理 CSS link 标签 - 单引号
+  result = result.replace(/<link([^>]+)href='([^']+\.css)'([^>]*)>/gi, (_match, before, href, after) => {
+    // console.log('找到 CSS (单引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<link${before}href='' data-css="${fullHref}"${after}>`;
+  });
+  
+  // 处理 script 标签 - 双引号
+  result = result.replace(/<script([^>]+)src="([^"]+\.js)"([^>]*)(?:><\/script>|<\/script>)/gi, (_match, before, src, after) => {
+    // console.log('找到 Script (双引号):', src);
+    let fullSrc = src;
+    if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/api/')) {
+      fullSrc = `/api/books/${bookId.value}/resources/${src}`;
+    }
+    // console.log('完整路径:', fullSrc);
+    return `<script${before}src="" data-script="${fullSrc}"${after}><\/script>`;
+  });
+  
+  // 处理 script 标签 - 单引号
+  result = result.replace(/<script([^>]+)src='([^']+\.js)'([^>]*)(?:><\/script>|<\/script>)/gi, (_match, before, src, after) => {
+    // console.log('找到 Script (单引号):', src);
+    let fullSrc = src;
+    if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/api/')) {
+      fullSrc = `/api/books/${bookId.value}/resources/${src}`;
+    }
+    // console.log('完整路径:', fullSrc);
+    return `<script${before}src='' data-script="${fullSrc}"${after}><\/script>`;
+  });
+  
+  // 处理普通 img 标签 - 双引号
+  result = result.replace(/<img([^>]+)src="([^"]+)"([^>]*)>/gi, (_match, before, src, after) => {
+    // console.log('找到图片 (双引号):', src);
+    let fullSrc = src;
+    if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/api/')) {
+      fullSrc = `/api/books/${bookId.value}/resources/${src}`;
+    }
+    // console.log('完整路径:', fullSrc);
+    return `<img${before}src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="${fullSrc}"${after}>`;
+  });
+  
+  // 处理普通 img 标签 - 单引号
+  result = result.replace(/<img([^>]+)src='([^']+)'([^>]*)>/gi, (_match, before, src, after) => {
+    // console.log('找到图片 (单引号):', src);
+    let fullSrc = src;
+    if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/api/')) {
+      fullSrc = `/api/books/${bookId.value}/resources/${src}`;
+    }
+    // console.log('完整路径:', fullSrc);
+    return `<img${before}src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="${fullSrc}"${after}>`;
+  });
+  
+  // 处理 SVG image 标签 - xlink:href 双引号
+  result = result.replace(/<image([^>]+)xlink:href="([^"]+)"([^>]*)>/gi, (_match, before, href, after) => {
+    // console.log('找到 SVG 图片 (xlink:href 双引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<image${before}xlink:href="" data-href="${fullHref}"${after}>`;
+  });
+  
+  // 处理 SVG image 标签 - xlink:href 单引号
+  result = result.replace(/<image([^>]+)xlink:href='([^']+)'([^>]*)>/gi, (_match, before, href, after) => {
+    // console.log('找到 SVG 图片 (xlink:href 单引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<image${before}xlink:href='' data-href="${fullHref}"${after}>`;
+  });
+  
+  // 处理 SVG image 标签 - href 双引号（SVG 2.0 直接用 href）
+  result = result.replace(/<image([^>]+)href="([^"]+)"([^>]*)>/gi, (_match, before, href, after) => {
+    // 检查是否已经被处理过（有 xlink:href）
+    if (_match.includes('xlink:href')) {
+      return _match;
+    }
+    // console.log('找到 SVG 图片 (href 双引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<image${before}href="" data-href="${fullHref}"${after}>`;
+  });
+  
+  // 处理 SVG image 标签 - href 单引号（SVG 2.0 直接用 href）
+  result = result.replace(/<image([^>]+)href='([^']+)'([^>]*)>/gi, (_match, before, href, after) => {
+    // 检查是否已经被处理过
+    if (_match.includes('xlink:href')) {
+      return _match;
+    }
+    // console.log('找到 SVG 图片 (href 单引号):', href);
+    let fullHref = href;
+    if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/api/')) {
+      fullHref = `/api/books/${bookId.value}/resources/${href}`;
+    }
+    // console.log('完整路径:', fullHref);
+    return `<image${before}href='' data-href="${fullHref}"${after}>`;
+  });
+  
+  return result;
+};
+
+// 加载所有图片和资源
+const loadAllImages = () => {
+  console.log('开始加载所有图片和资源');
+  const chapterHtml = document.querySelector('.chapter-html');
+  if (!chapterHtml) {
+    console.log('未找到 chapter-html 元素');
+    return;
+  }
+  
+  // 处理 CSS link 标签
+  const cssLinks = chapterHtml.querySelectorAll('link[data-css]');
+  console.log('找到需要加载的 CSS 数量:', cssLinks.length);
+  
+  cssLinks.forEach((link, index) => {
+    const cssUrl = link.getAttribute('data-css');
+    console.log(`CSS ${index} data-css:`, cssUrl);
+    if (cssUrl) {
+      loadCSSWithAuth(cssUrl, link as HTMLLinkElement);
+    }
+  });
+  
+  // 处理 script 标签
+  const scripts = chapterHtml.querySelectorAll('script[data-script]');
+  console.log('找到需要加载的 Script 数量:', scripts.length);
+  
+  scripts.forEach((script, index) => {
+    const scriptUrl = script.getAttribute('data-script');
+    console.log(`Script ${index} data-script:`, scriptUrl);
+    if (scriptUrl) {
+      loadScriptWithAuth(scriptUrl, script as HTMLScriptElement);
+    }
+  });
+  
+  // 处理普通 img 标签
+  const images = chapterHtml.querySelectorAll('img[data-src]');
+  console.log('找到需要加载的普通图片数量:', images.length);
+  
+  images.forEach((img, index) => {
+    const src = img.getAttribute('data-src');
+    console.log(`普通图片 ${index} data-src:`, src);
+    if (src) {
+      loadImageWithAuth(src, img as HTMLImageElement, 'img');
+    }
+  });
+  
+  // 处理 SVG image 标签
+  const svgImages = chapterHtml.querySelectorAll('image[data-href]');
+  console.log('找到需要加载的 SVG 图片数量:', svgImages.length);
+  
+  svgImages.forEach((img, index) => {
+    const href = img.getAttribute('data-href');
+    console.log(`SVG 图片 ${index} data-href:`, href);
+    if (href) {
+      loadImageWithAuth(href, img as unknown as HTMLElement, 'svg');
+    }
+  });
+};
+
+// 使用认证头加载 Script
+const loadScriptWithAuth = async (scriptUrl: string, scriptElement: HTMLScriptElement) => {
+  console.log('开始加载 Script:', scriptUrl);
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('没有 token，直接设置 src');
+      scriptElement.src = scriptUrl;
+      return;
+    }
+    
+    console.log('使用认证头加载 Script');
+    const response = await fetch(scriptUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    console.log('Script 加载响应状态:', response.status);
+    
+    if (response.ok) {
+      const scriptText = await response.text();
+      console.log('Script 加载成功，创建新的 script 标签');
+      
+      // 创建新的 script 标签并内联代码
+      const newScript = document.createElement('script');
+      newScript.textContent = scriptText;
+      
+      // 复制原 script 标签的属性（除了 src 和 data-script）
+      for (let attr of scriptElement.attributes) {
+        if (attr.name !== 'src' && attr.name !== 'data-script') {
+          newScript.setAttribute(attr.name, attr.value);
+        }
+      }
+      
+      // 替换原来的 script 标签
+      if (scriptElement.parentNode) {
+        scriptElement.parentNode.replaceChild(newScript, scriptElement);
+      }
+    } else {
+      console.error('Failed to load Script:', response.status, scriptUrl);
+      // 加载失败时尝试直接使用原始 src
+      scriptElement.src = scriptUrl;
+    }
+  } catch (error) {
+    console.error('Failed to load Script with auth:', error);
+    // 加载失败时尝试直接使用原始 src
+    scriptElement.src = scriptUrl;
+  }
+};
+
+// 使用认证头加载 CSS
+const loadCSSWithAuth = async (cssUrl: string, linkElement: HTMLLinkElement) => {
+  console.log('开始加载 CSS:', cssUrl);
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('没有 token，直接设置 href');
+      linkElement.href = cssUrl;
+      return;
+    }
+    
+    console.log('使用认证头加载 CSS');
+    const response = await fetch(cssUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    console.log('CSS 加载响应状态:', response.status);
+    
+    if (response.ok) {
+      const cssText = await response.text();
+      console.log('CSS 加载成功，创建 style 标签');
+      
+      // 创建 style 标签并内联 CSS
+      const styleTag = document.createElement('style');
+      styleTag.textContent = cssText;
+      
+      // 替换原来的 link 标签
+      if (linkElement.parentNode) {
+        linkElement.parentNode.replaceChild(styleTag, linkElement);
+      }
+    } else {
+      console.error('Failed to load CSS:', response.status, cssUrl);
+      // 加载失败时尝试直接使用原始 href
+      linkElement.href = cssUrl;
+    }
+  } catch (error) {
+    console.error('Failed to load CSS with auth:', error);
+    // 加载失败时尝试直接使用原始 href
+    linkElement.href = cssUrl;
+  }
+};
+
+// 使用认证头加载图片
+const loadImageWithAuth = async (src: string, element: HTMLElement, type: 'img' | 'svg') => {
+  console.log(`开始加载图片 (${type}):`, src);
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('没有 token，直接使用 src/href');
+      // 如果没有 token，直接使用原始 src/href
+      if (type === 'img') {
+        (element as HTMLImageElement).src = src;
+      } else {
+        element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', src);
+        element.setAttribute('href', src);
+      }
+      return;
+    }
+    
+    console.log('使用认证头加载图片');
+    const response = await fetch(src, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    console.log('图片加载响应状态:', response.status);
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const objectURL = URL.createObjectURL(blob);
+      console.log('创建 objectURL:', objectURL);
+      
+      if (type === 'img') {
+        (element as HTMLImageElement).src = objectURL;
+      } else {
+        // 设置 xlink:href 和 href 以兼容不同的 SVG 解析器
+        element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', objectURL);
+        element.setAttribute('href', objectURL);
+      }
+      console.log('图片加载成功');
+    } else {
+      console.error('Failed to load image:', response.status, src);
+      // 加载失败时尝试直接使用原始 src/href
+      if (type === 'img') {
+        (element as HTMLImageElement).src = src;
+      } else {
+        element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', src);
+        element.setAttribute('href', src);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load image with auth:', error);
+    // 加载失败时尝试直接使用原始 src/href
+    if (type === 'img') {
+      (element as HTMLImageElement).src = src;
+    } else {
+      element.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', src);
+      element.setAttribute('href', src);
+    }
   }
 };
 
