@@ -176,6 +176,9 @@ pub async fn add_book(
 ) -> Result<BookModel, &'static str> {
     let mut title = String::new();
     let mut author = None;
+    let mut category = None;
+    let mut isbn = None;
+    let mut description = None;
     let mut file_path = String::new();
     let mut file_type = String::new();
     let mut file_hash = String::new();
@@ -238,6 +241,24 @@ pub async fn add_book(
         } else if name == "author" {
             let data = field.bytes().await.map_err(|_| "Failed to read author")?;
             author = Some(String::from_utf8_lossy(&data).to_string());
+        } else if name == "category" {
+            let data = field.bytes().await.map_err(|_| "Failed to read category")?;
+            let category_str = String::from_utf8_lossy(&data).to_string();
+            if !category_str.is_empty() {
+                category = Some(category_str);
+            }
+        } else if name == "isbn" {
+            let data = field.bytes().await.map_err(|_| "Failed to read isbn")?;
+            let isbn_str = String::from_utf8_lossy(&data).to_string();
+            if !isbn_str.is_empty() {
+                isbn = Some(isbn_str);
+            }
+        } else if name == "description" {
+            let data = field.bytes().await.map_err(|_| "Failed to read description")?;
+            let description_str = String::from_utf8_lossy(&data).to_string();
+            if !description_str.is_empty() {
+                description = Some(description_str);
+            }
         }
     }
 
@@ -256,6 +277,9 @@ pub async fn add_book(
     let book = book::ActiveModel {
         title: Set(title),
         author: Set(author),
+        category: Set(category),
+        isbn: Set(isbn),
+        description: Set(description),
         file_path: Set(file_path.clone()),
         file_type: Set(file_type.clone()),
         file_size: Set(file_size),
