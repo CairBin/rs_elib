@@ -19,6 +19,8 @@ static TITLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"<h[1-3][^>]*>(.*?)</h[
 static TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"<[^>]+>"#).unwrap());
 static SRC_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"(src|href)\s*=\s*["']([^"']+)["']"#).unwrap());
+static BODY_CONTENT_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<body[^>]*>([\s\S]*?)</body>"#).unwrap());
 
 #[derive(Debug)]
 enum EpubParserState {
@@ -169,6 +171,15 @@ impl EpubParser {
         let title = caps.get(1)?.as_str();
         Some(TAG_RE.replace_all(title, "").trim().to_string())
     }
+
+    fn extract_body_content(html: &str) -> String {
+        if let Some(caps) = BODY_CONTENT_RE.captures(html) {
+            if let Some(body_content) = caps.get(1) {
+                return body_content.as_str().to_string();
+            }
+        }
+        html.to_string()
+    }
 }
 
 impl FormatParser for EpubParser {
@@ -287,6 +298,7 @@ impl FormatParser for EpubParser {
                     archive.by_name(&full_str)?
                         .read_to_string(&mut content)?;
 
+                    let content = Self::extract_body_content(&content);
                     let content = Self::replace_resources(&content, &res_map);
                     let chapter_num = (idx + 1) as i32;
                     let title = Self::extract_title(&content)
