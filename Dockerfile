@@ -17,7 +17,7 @@ COPY static ./static
 RUN cargo build --release
 
 # 运行阶段
-FROM debian:bullseye-slim
+FROM debian:latest
 
 # 安装必要的依赖
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
