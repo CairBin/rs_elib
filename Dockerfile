@@ -1,5 +1,5 @@
 # 构建阶段
-FROM rust:1.75 as builder
+FROM rust:1.77 as builder
 
 # 设置工作目录
 WORKDIR /app
