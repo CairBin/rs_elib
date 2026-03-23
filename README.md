@@ -14,12 +14,12 @@ cargo run
 cargo build --release
 ./target/release/rs_elib
 
-# 嵌入文本方式加载HTML等资源（无需额外static资源目录，但部分css/js资源需要从网络引入）
+# 嵌入文本方式加载HTML等资源
 cargo build --release --features "embed_static"
 
 ```
 
-如果使用`embed_static`特征，无需额外static资源目录，程序会将`../static/index.min.html`嵌入到可执行文件中，但部分css/js资源仍需要从网络引入。反之，则需`./static`目录存放`index.html`来加载资源给前端。
+如果使用`embed_static`特征，程序会将`../static/index.min.html`嵌入到可执行文件中，但部分css/js资源仍需要从网络引入以及本地static目录引入。
 
 启动参数如下:
 
@@ -32,6 +32,117 @@ cargo build --release --features "embed_static"
 | `--db_conn_str` | 字符串  | `sqlite:elib.db?mode=rwc` | 数据库连接字符串（seaorm支持类型） |
 
 服务器默认运行在 `http://127.0.0.1:3000`
+
+# Docker使用说明
+
+本文件提供了使用Docker构建和运行rs\_elib应用的详细说明。
+
+## 构建Docker镜像
+
+### 基本构建
+
+```bash
+# 进入项目根目录
+cd rs_elib
+
+# 构建Docker镜像
+docker build -t rs_elib .
+```
+
+### 构建时指定标签
+
+```bash
+docker build -t rs_elib:v1.0 .
+```
+
+## 运行Docker容器
+
+### 基本运行
+
+```bash
+docker run -p 3000:3000 rs_elib
+```
+
+### 运行时设置环境变量
+
+```bash
+docker run -p 3000:3000 \
+  -e JWT_SECRET="your_secure_secret" \
+  rs_elib
+```
+
+### 运行时传递命令行参数
+
+```bash
+docker run -p 3000:3000 \
+  rs_elib --host 0.0.0.0 --port 3000
+```
+
+### 同时设置环境变量和命令行参数
+
+```bash
+docker run -p 3000:3000 \
+  -e JWT_SECRET="your_secure_secret" \
+  rs_elib --host 0.0.0.0 --port 3000 --upload-dir /app/uploads
+```
+
+### 挂载上传目录
+
+```bash
+docker run -p 3000:3000 \
+  -e JWT_SECRET="your_secure_secret" \
+  -v /path/to/local/uploads:/app/uploads \
+  rs_elib --upload-dir /app/uploads
+```
+
+
+### 示例：完整的生产环境配置
+
+```bash
+docker run -d \
+  --name rs_elib \
+  -p 80:3000 \
+  -e JWT_SECRET="your_very_secure_secret_key" \
+  -v /data/rs_elib/uploads:/app/uploads \
+  -v /data/rs_elib/db:/app/db \
+  rs_elib \
+  --host 0.0.0.0 \
+  --port 3000 \
+  --upload-dir /app/uploads \
+  --db-conn-str sqlite:///app/db/elib.db \
+  --log-level warn
+```
+
+### 查看容器日志
+
+```bash
+docker logs rs_elib
+```
+
+### 进入容器
+
+```bash
+docker exec -it rs_elib bash
+```
+
+### 停止和删除容器
+
+```bash
+# 停止容器
+docker stop rs_elib
+
+# 删除容器
+docker rm rs_elib
+```
+
+### 注意事项
+
+1. 首次运行时，应用会自动创建SQLite数据库文件
+2. 确保JWT\_SECRET在生产环境中设置为安全的随机字符串
+3. 对于生产环境，建议使用外部数据库而不是SQLite
+4. 上传目录应该挂载到宿主机，以防止容器重启后数据丢失
+
+
 
 ## 技术栈
 
