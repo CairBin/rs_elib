@@ -33,13 +33,13 @@ cargo build --release --features "embed_static"
 
 服务器默认运行在 `http://127.0.0.1:3000`
 
-# Docker使用说明
+## Docker使用说明
 
 本文件提供了使用Docker构建和运行rs\_elib应用的详细说明。
 
-## 构建Docker镜像
+### 构建Docker镜像
 
-### 基本构建
+#### 基本构建
 
 ```bash
 # 进入项目根目录
@@ -49,21 +49,21 @@ cd rs_elib
 docker build -t rs_elib .
 ```
 
-### 构建时指定标签
+#### 构建时指定标签
 
 ```bash
 docker build -t rs_elib:v1.0 .
 ```
 
-## 运行Docker容器
+### 运行Docker容器
 
-### 基本运行
+#### 基本运行
 
 ```bash
 docker run -p 3000:3000 rs_elib
 ```
 
-### 运行时设置环境变量
+#### 运行时设置环境变量
 
 ```bash
 docker run -p 3000:3000 \
@@ -71,14 +71,14 @@ docker run -p 3000:3000 \
   rs_elib
 ```
 
-### 运行时传递命令行参数
+#### 运行时传递命令行参数
 
 ```bash
 docker run -p 3000:3000 \
   rs_elib --host 0.0.0.0 --port 3000
 ```
 
-### 同时设置环境变量和命令行参数
+#### 同时设置环境变量和命令行参数
 
 ```bash
 docker run -p 3000:3000 \
@@ -86,7 +86,7 @@ docker run -p 3000:3000 \
   rs_elib --host 0.0.0.0 --port 3000 --upload-dir /app/uploads
 ```
 
-### 挂载上传目录
+#### 挂载上传目录
 
 ```bash
 docker run -p 3000:3000 \
@@ -96,7 +96,7 @@ docker run -p 3000:3000 \
 ```
 
 
-### 示例：完整的生产环境配置
+#### 示例：完整的生产环境配置
 
 ```bash
 docker run -d \
