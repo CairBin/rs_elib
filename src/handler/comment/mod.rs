@@ -1,6 +1,8 @@
 mod request;
+mod dto;
 
 use request::*;
+use dto::CommentDto;
 
 use crate::utils::api::*;
 use axum::{
@@ -16,6 +18,36 @@ use crate::middleware::auth::AuthMiddleware;
 use chrono::Utc;
 use crate::entity::comment;
 use crate::service::settings as settings_service;
+
+// 辅助函数：将评论模型转换为DTO
+async fn comment_to_dto(state: &AppState, comment: comment::Model) -> CommentDto {
+    // 查询用户信息获取用户名
+    let username = match User::find_by_id(comment.user_id).one(&state.db).await {
+        Ok(Some(user)) => user.username,
+        _ => "未知用户".to_string(),
+    };
+    
+    CommentDto {
+        id: comment.id,
+        book_id: comment.book_id,
+        chapter_id: comment.chapter_id,
+        user_id: comment.user_id,
+        username,
+        content: comment.content,
+        status: comment.status,
+        created_at: comment.created_at,
+        updated_at: comment.updated_at,
+    }
+}
+
+// 辅助函数：将评论模型列表转换为DTO列表
+async fn comments_to_dtos(state: &AppState, comments: Vec<comment::Model>) -> Vec<CommentDto> {
+    let mut dtos = Vec::with_capacity(comments.len());
+    for comment in comments {
+        dtos.push(comment_to_dto(state, comment).await);
+    }
+    dtos
+}
 
 
 #[axum::debug_handler]
@@ -89,7 +121,10 @@ pub async fn create_comment(
     };
 
     match comment.insert(&state.db).await {
-        Ok(comment) => created(comment),
+        Ok(comment) => {
+            let comment_dto = comment_to_dto(&state, comment).await;
+            created(comment_dto)
+        },
         Err(_) => internal_error("Failed to create comment"),
     }
 }
@@ -117,7 +152,10 @@ pub async fn get_book_comments(
         .await;
 
     match comments {
-        Ok(comments) => success(comments),
+        Ok(comments) => {
+            let comment_dtos = comments_to_dtos(&state, comments).await;
+            success(comment_dtos)
+        },
         Err(_) => internal_error("Database error"),
     }
 }
@@ -145,7 +183,10 @@ pub async fn get_chapter_comments(
         .await;
 
     match comments {
-        Ok(comments) => success(comments),
+        Ok(comments) => {
+            let comment_dtos = comments_to_dtos(&state, comments).await;
+            success(comment_dtos)
+        },
         Err(_) => internal_error("Database error"),
     }
 }
@@ -188,7 +229,8 @@ pub async fn get_pending_comments(
         .await
         .unwrap_or_default();
 
-    success(comments)
+    let comment_dtos = comments_to_dtos(&state, comments).await;
+    success(comment_dtos)
 }
 
 
@@ -220,7 +262,10 @@ pub async fn review_comment(
     comment.updated_at = Set(now);
 
     match comment.update(&state.db).await {
-        Ok(comment) => success(comment),
+        Ok(comment) => {
+            let comment_dto = comment_to_dto(&state, comment).await;
+            success(comment_dto)
+        },
         Err(_) => internal_error("Failed to update comment"),
     }
 }

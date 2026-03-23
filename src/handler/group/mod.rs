@@ -507,15 +507,16 @@ pub async fn get_group_invite_codes(
     let can_view = if claims.role == "admin" || claims.role == "root" {
         true
     } else {
-        group.created_by == Some(claims.sub) || {
-            Group::find()
-                .join(JoinType::InnerJoin, group::Relation::UserGroups.def())
-                .filter(user_group::Column::UserId.eq(claims.sub))
-                .filter(group::Column::Id.eq(group_id))
-                .count(&state.db)
-                .await
-                .unwrap_or(0) > 0
-        }
+        group.created_by == Some(claims.sub) 
+        // || {
+        //     Group::find()
+        //         .join(JoinType::InnerJoin, group::Relation::UserGroups.def())
+        //         .filter(user_group::Column::UserId.eq(claims.sub))
+        //         .filter(group::Column::Id.eq(group_id))
+        //         .count(&state.db)
+        //         .await
+        //         .unwrap_or(0) > 0
+        // }
     };
 
     if !can_view {

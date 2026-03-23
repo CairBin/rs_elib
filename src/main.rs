@@ -107,6 +107,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_routes = Router::new()
         .merge(public_routes)
         .merge(protected_routes)
+        .fallback(|| async {
+            (axum::http::StatusCode::NOT_FOUND, axum::Json(serde_json::json!({
+                "error": "Not Found",
+                "message": "The requested resource was not found"
+            })))
+        })
         .layer(compression.clone());
 
     let app = if_embed_static!(Router::new()

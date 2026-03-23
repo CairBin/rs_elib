@@ -1,3 +1,12 @@
 /target
 *.db
 /uploads
+
+# Vite项目忽略规则
+/front/node_modules
+/front/dist
+/front/.env
+/front/.env.local
+/front/.env.*.local
+/front/vite.config.js.timestamp-*
+/front/*.local

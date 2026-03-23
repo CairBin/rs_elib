@@ -22,9 +22,9 @@ pub async fn get_settings(
     State(state): State<AppState>,
     AuthMiddleware(claims): AuthMiddleware,
 ) -> Response {
-    if claims.role != "admin" && claims.role != "root"{
-        return forbidden("Access denied");
-    }
+    // if claims.role != "admin" && claims.role != "root"{
+    //     return forbidden("Access denied");
+    // }
 
     let registration_enabled = match settings_service::get_or_create_setting(&state, SETTING_REGISTRATION_ENABLED, "true").await {
         Ok(s) => s.value == "true",
